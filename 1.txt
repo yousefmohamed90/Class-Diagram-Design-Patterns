@@ -1,48 +1,38 @@
-@startuml Part1_Core_Architecture_With_Payment
-title Part 1: Core Architecture (Auth, Controller, Services + Payment)
 skinparam classAttributeIconSize 0
 skinparam linetype ortho
-skinparam packageStyle rectangle
-
-'==============================
-'        AUTH PACKAGE
-'==============================
-
-package "auth" {
-  interface IAuthenticatable {
-    + login(userID: String, password: String): boolean
-    + register(name: String, email: String, password: String): void
-  }
-
-  class Student implements IAuthenticatable {
+package "entities"  {
+  
+  class Student {
     - studentID: String
     - name: String
     - email: String
-    - password: String
-
-    + login(userID: String, password: String): boolean
-    + register(name: String, email: String, password: String): void
-    + requestService(controller: IController): void
+    - passwordHash: String
+    - role: String
+    - registrationDate: Date
+    
+    + getStudentID(): String
+    + getName(): String
+    + getEmail(): String
+    + setName(name: String): void
+    + setEmail(email: String): void
   }
 
-  class Admin implements IAuthenticatable {
+  class Admin {
     - adminID: String
     - name: String
     - email: String
-    - password: String
-
-    + login(userID: String, password: String): boolean
-    + register(name: String, email: String, password: String): void
-    + manageSystemSettings(): void
-    + accessController(controller: IController): void
+    - passwordHash: String
+    - role: String
+    - permissions: List<String>
+    
+    + getAdminID(): String
+    + getName(): String
+    + getEmail(): String
+    + getPermissions(): List<String>
   }
+  
 }
-
-'==============================
-'        CONTROLLER PACKAGE
-'==============================
-
-package "controller" {
+package "controller"  {
   interface IController {
     + handleAccommodationRequest(studentID: String, accommodationID: String): void
     + handleTransportRequest(studentID: String, transportID: String): void
@@ -57,8 +47,7 @@ package "controller" {
     - transportService: ITransportService
     - mealService: IMealService
     - clubService: IClubService
-    ' PaymentService is usually internal to other services, 
-    ' but strictly speaking, the controller delegates requests.
+    - authorizationService: IAuthorizationService
 
     + handleAccommodationRequest(studentID: String, accommodationID: String): void
     + handleTransportRequest(studentID: String, transportID: String): void
@@ -66,16 +55,30 @@ package "controller" {
     + handleClubRequest(studentID: String, clubID: String): void
     + sendStudentNotification(studentID: String, message: String, type: String): void
   }
+
 }
 
-'==============================
-'        SERVICES PACKAGE
-'==============================
-
-package "services" {
-  
-  ' --- Interfaces ---
-  
+package "services"  {
+  interface IAuthenticationService {
+    + authenticate(email: String, password: String): AuthToken
+    + register(userData: RegisterDTO): User
+    + validateToken(token: String): boolean
+    + logout(token: String): void
+    + changePassword(userID: String, oldPassword: String, newPassword: String): boolean
+    + resetPassword(email: String): void
+  }
+  class AuthenticationService implements IAuthenticationService {
+    - userRepository: IRepository
+    - passwordHasher: IPasswordHasher
+    - tokenManager: ITokenManager
+    
+    + authenticate(email: String, password: String): AuthToken
+    + register(userData: RegisterDTO): User
+    + validateToken(token: String): boolean
+    + logout(token: String): void
+    + changePassword(userID: String, oldPassword: String, newPassword: String): boolean
+    + resetPassword(email: String): void
+  }
   interface IPaymentService {
       + processTransaction(amount: double, type: String): boolean
   }
@@ -84,7 +87,6 @@ package "services" {
     + sendNotification(recipientID: String, message: String, type: String): void
     + viewNotifications(userID: String): List<String>
   }
-
   interface IAccommodationService {
     + bookHousing(studentID: String, accommodationID: String): void
     + cancelBooking(studentID: String, bookingID: String): void
@@ -104,10 +106,6 @@ package "services" {
     + chooseClub(studentID: String, clubID: String): void
     + cancelClubMembership(studentID: String, clubID: String): void
   }
-
-  ' --- Implementations ---
-
-  ' (Added Payment Service Implementation)
   class PaymentService implements IPaymentService {
       - repo: IRepository
       - processor: IPaymentProcessor
@@ -124,6 +122,7 @@ package "services" {
   class AccommodationService implements IAccommodationService {
     - repository: IRepository
     - paymentService: IPaymentService
+    - authorizationService: IAuthorizationService
     + bookHousing(studentID: String, accommodationID: String): void
     + cancelBooking(studentID: String, bookingID: String): void
   }
@@ -131,6 +130,7 @@ package "services" {
   class TransportService implements ITransportService {
     - repository: IRepository
     - paymentService: IPaymentService
+    - authorizationService: IAuthorizationService
     + bookTransport(studentID: String, transportID: String): void
     + cancelBooking(studentID: String, bookingID: String): void
   }
@@ -138,8 +138,8 @@ package "services" {
   class MealService implements IMealService {
     - repository: IRepository
     - mealDirector: MealDirector
-    - mealFactory: IMealFactory
     - paymentService: IPaymentService
+    - authorizationService: IAuthorizationService
     + selectMeal(studentID: String, mealType: String): void
     + cancelMeal(studentID: String, mealID: String): void
   }
@@ -147,36 +147,29 @@ package "services" {
   class ClubService implements IClubService {
     - repository: IRepository
     - paymentService: IPaymentService
+    - authorizationService: IAuthorizationService
     + chooseClub(studentID: String, clubID: String): void
     + cancelClubMembership(studentID: String, clubID: String): void
   }
-}
+} 
+class MealDirector  
+
+Student --> IController
+Admin --> IController 
+Controller --> IAuthenticationService
+Controller --> INotificationService : delegates to
+Controller --> IAccommodationService : delegates to
+Controller --> ITransportService : delegates to
+Controller --> IMealService : delegates to
+Controller --> IClubService : delegates to
+
+AccommodationService --> IPaymentService : uses for payments
+TransportService --> IPaymentService : uses for payments
+MealService --> IPaymentService : uses for payments
+ClubService --> IPaymentService : uses for payments
 
 
-
-interface INotificationFactory <<external>>
-interface IMealFactory <<external>>
-class MealDirector <<external>>
-
-auth.Student --> controller.IController : requests services
-auth.Admin --> controller.IController : manages
-
-
-controller.Controller --> services.INotificationService : uses
-controller.Controller --> services.IAccommodationService : delegates to
-controller.Controller --> services.ITransportService : delegates to
-controller.Controller --> services.IMealService : delegates to
-controller.Controller --> services.IClubService : delegates to
-
-
-services.AccommodationService --> services.IPaymentService : uses
-services.TransportService --> services.IPaymentService : uses
-services.MealService --> services.IPaymentService : uses
 
 services.NotificationService --> INotificationFactory : uses
 services.MealService --> MealDirector : uses
-services.MealService --> IMealFactory : uses
-
-
-
 @enduml
