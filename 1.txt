@@ -169,6 +169,7 @@ MealService --> IPaymentService : uses for payments
 ClubService --> IPaymentService : uses for payments
 
 
+interface INotificationFactory
 
 services.NotificationService --> INotificationFactory : uses
 services.MealService --> MealDirector : uses
