@@ -1,0 +1,216 @@
+@startuml
+title Part 2: Complete Services, Repository, Database & Payment Architecture
+skinparam linetype ortho
+skinparam classAttributeIconSize 0
+skinparam packageStyle rectangle
+package "Service Layer"  {
+    interface IPaymentService {
+        + processTransaction(amount: double, type: String): boolean
+    }
+    
+    interface INotificationService {
+        + sendNotification(recipientID: String, message: String, type: String): void
+    }
+    
+    interface IAccommodationService {
+        + bookHousing(studentID: String, accommodationID: String): void
+    }
+    
+    interface ITransportService {
+        + bookTransport(studentID: String, transportID: String): void
+    }
+    
+    interface IMealService {
+        + selectMeal(studentID: String, mealType: String): void
+    }
+    
+    interface IClubService {
+        + chooseClub(studentID: String, clubID: String): void
+    }
+
+    class PaymentService implements IPaymentService {
+        - repo: IRepository
+        - processor: IPaymentProcessor
+        + processTransaction(amount: double, type: String): boolean
+    }
+    
+    class NotificationService implements INotificationService {
+        - repository: IRepository
+        + sendNotification(recipientID: String, message: String, type: String): void
+    }
+    
+    class AccommodationService implements IAccommodationService {
+        - repository: IRepository
+        - paymentService: IPaymentService
+        + bookHousing(studentID: String, accommodationID: String): void
+    }
+    
+    class TransportService implements ITransportService {
+        - repository: IRepository
+        - paymentService: IPaymentService
+        + bookTransport(studentID: String, transportID: String): void
+    }
+    
+    class MealService implements IMealService {
+        - repository: IRepository
+        - paymentService: IPaymentService
+        + selectMeal(studentID: String, mealType: String): void
+    }
+    
+    class ClubService implements IClubService {
+        - repository: IRepository
+        - paymentService: IPaymentService
+        + chooseClub(studentID: String, clubID: String): void
+    }
+    
+}
+
+package "Repository Layer" #LightBlue {
+    interface IRepository {
+        + save(entity: Object): void
+        + findById(id: String): Object
+        + delete(id: String): void
+        + update(entity: Object): void
+        + findAll(): List<Object>
+        + findByQuery(criteria: Map): List<Object>
+    }
+    
+
+}
+
+package "Database Layer" #LightGreen {
+    interface IDatabaseAccess {
+        + executeQuery(query: String): Object
+        + connect(): void
+        + disconnect(): void
+        + beginTransaction(): void
+        + commit(): void
+        + rollback(): void
+    }
+
+    class DatabaseManager implements IDatabaseAccess {
+        - static instance: DatabaseManager
+        - connection: Connection
+        - DatabaseManager()
+        + static getInstance(): DatabaseManager
+        + connect(): void
+        + executeQuery(query: String): Object
+    }
+
+    class DatabaseProxy implements IDatabaseAccess {
+        - realDatabase: DatabaseManager
+        - accessLog: List<String>
+        + connect(): void
+        + executeQuery(query: String): Object
+        - checkAccess(): boolean
+        - logAccess(query: String): void
+    }
+    
+    DatabaseProxy --> DatabaseManager : delegates to
+    
+}
+
+package "Payment Processing Layer" #LightYellow {
+    
+    interface IPaymentProcessor {
+        + processPayment(amount: double): boolean
+        + refundPayment(transactionID: String): boolean
+        + validatePayment(details: PaymentDetails): boolean
+    }
+
+    class VisaPayment implements IPaymentProcessor {
+        - apiKey: String
+        + processPayment(amount: double): boolean
+        + refundPayment(transactionID: String): boolean
+        + validatePayment(details: PaymentDetails): boolean
+    }
+
+    class VCPayment {
+        + sendVirtualCoins(amt: double, cur: String, hash: String): boolean
+        + verifyTransaction(hash: String): boolean
+    }
+
+    class VCAdapter extends VCPayment implements IPaymentProcessor {
+        + processPayment(amount: double): boolean
+        + refundPayment(transactionID: String): boolean
+        + validatePayment(details: PaymentDetails): boolean
+    }
+}
+
+package "Entities (Domain Models)" #Lavender {
+   class Payment {
+        - paymentID: String
+        - studentID: String
+        - amount: double
+        - date: Date
+        - paymentMethod: String
+        - status: String
+    }
+    
+    class Accommodation {
+        - accommodationID: String 
+        - name: String 
+        - location: String 
+        - capacity: int 
+        - pricePerNight: double
+    } 
+    
+    class Transport {
+        - transportID: String 
+        - type: String 
+        - schedule: String 
+        - seatsAvailable: int
+        - pricePerSeat: double
+    } 
+    
+    class Meal {
+        - mealID: String 
+        - name: String 
+        - type: String 
+        - price: double 
+    }
+    
+    class Club {
+        - clubID: String 
+        - name: String 
+        - description: String 
+        - membershipFee: double
+    }
+    
+    class Notification {
+        - notificationID: String 
+        - recipientID: String 
+        - message: String 
+        - dateSent: Date 
+        - isRead: boolean
+    }
+}
+
+
+PaymentService --> IRepository : persists payments
+NotificationService --> IRepository 
+AccommodationService --> IRepository 
+TransportService --> IRepository 
+MealService --> IRepository
+ClubService --> IRepository 
+
+AccommodationService --> IPaymentService : processes payments
+TransportService --> IPaymentService : processes payments
+MealService --> IPaymentService : processes payments
+ClubService --> IPaymentService : processes payments
+
+IRepository --> IDatabaseAccess : executes SQL queries through
+
+IRepository --> Payment : manages
+IRepository --> Accommodation : manages
+IRepository --> Transport : manages
+IRepository --> Meal : manages
+IRepository --> Club : manages
+IRepository --> Notification : manages
+
+
+PaymentService --> IPaymentProcessor : processes through
+
+
+
+@enduml

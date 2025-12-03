@@ -1,0 +1,182 @@
+@startuml Part1_Core_Architecture_With_Payment
+title Part 1: Core Architecture (Auth, Controller, Services + Payment)
+skinparam classAttributeIconSize 0
+skinparam linetype ortho
+skinparam packageStyle rectangle
+
+'==============================
+'        AUTH PACKAGE
+'==============================
+
+package "auth" {
+  interface IAuthenticatable {
+    + login(userID: String, password: String): boolean
+    + register(name: String, email: String, password: String): void
+  }
+
+  class Student implements IAuthenticatable {
+    - studentID: String
+    - name: String
+    - email: String
+    - password: String
+
+    + login(userID: String, password: String): boolean
+    + register(name: String, email: String, password: String): void
+    + requestService(controller: IController): void
+  }
+
+  class Admin implements IAuthenticatable {
+    - adminID: String
+    - name: String
+    - email: String
+    - password: String
+
+    + login(userID: String, password: String): boolean
+    + register(name: String, email: String, password: String): void
+    + manageSystemSettings(): void
+    + accessController(controller: IController): void
+  }
+}
+
+'==============================
+'        CONTROLLER PACKAGE
+'==============================
+
+package "controller" {
+  interface IController {
+    + handleAccommodationRequest(studentID: String, accommodationID: String): void
+    + handleTransportRequest(studentID: String, transportID: String): void
+    + handleMealRequest(studentID: String, mealType: String): void
+    + handleClubRequest(studentID: String, clubID: String): void
+    + sendStudentNotification(studentID: String, message: String, type: String): void
+  }
+
+  class Controller implements IController {
+    - notificationService: INotificationService
+    - accommodationService: IAccommodationService
+    - transportService: ITransportService
+    - mealService: IMealService
+    - clubService: IClubService
+    ' PaymentService is usually internal to other services, 
+    ' but strictly speaking, the controller delegates requests.
+
+    + handleAccommodationRequest(studentID: String, accommodationID: String): void
+    + handleTransportRequest(studentID: String, transportID: String): void
+    + handleMealRequest(studentID: String, mealType: String): void
+    + handleClubRequest(studentID: String, clubID: String): void
+    + sendStudentNotification(studentID: String, message: String, type: String): void
+  }
+}
+
+'==============================
+'        SERVICES PACKAGE
+'==============================
+
+package "services" {
+  
+  ' --- Interfaces ---
+  
+  interface IPaymentService {
+      + processTransaction(amount: double, type: String): boolean
+  }
+
+  interface INotificationService {
+    + sendNotification(recipientID: String, message: String, type: String): void
+    + viewNotifications(userID: String): List<String>
+  }
+
+  interface IAccommodationService {
+    + bookHousing(studentID: String, accommodationID: String): void
+    + cancelBooking(studentID: String, bookingID: String): void
+  }
+
+  interface ITransportService {
+    + bookTransport(studentID: String, transportID: String): void
+    + cancelBooking(studentID: String, bookingID: String): void
+  }
+
+  interface IMealService {
+    + selectMeal(studentID: String, mealType: String): void
+    + cancelMeal(studentID: String, mealID: String): void
+  }
+
+  interface IClubService {
+    + chooseClub(studentID: String, clubID: String): void
+    + cancelClubMembership(studentID: String, clubID: String): void
+  }
+
+  ' --- Implementations ---
+
+  ' (Added Payment Service Implementation)
+  class PaymentService implements IPaymentService {
+      - repo: IRepository
+      - processor: IPaymentProcessor
+      + processTransaction(amount: double, type: String): boolean
+  }
+
+  class NotificationService implements INotificationService {
+    - repository: IRepository
+    - notificationFactory: INotificationFactory
+    + sendNotification(recipientID: String, message: String, type: String): void
+    + viewNotifications(userID: String): List<String>
+  }
+
+  class AccommodationService implements IAccommodationService {
+    - repository: IRepository
+    - paymentService: IPaymentService
+    + bookHousing(studentID: String, accommodationID: String): void
+    + cancelBooking(studentID: String, bookingID: String): void
+  }
+
+  class TransportService implements ITransportService {
+    - repository: IRepository
+    - paymentService: IPaymentService
+    + bookTransport(studentID: String, transportID: String): void
+    + cancelBooking(studentID: String, bookingID: String): void
+  }
+
+  class MealService implements IMealService {
+    - repository: IRepository
+    - mealDirector: MealDirector
+    - mealFactory: IMealFactory
+    - paymentService: IPaymentService
+    + selectMeal(studentID: String, mealType: String): void
+    + cancelMeal(studentID: String, mealID: String): void
+  }
+
+  class ClubService implements IClubService {
+    - repository: IRepository
+    - paymentService: IPaymentService
+    + chooseClub(studentID: String, clubID: String): void
+    + cancelClubMembership(studentID: String, clubID: String): void
+  }
+}
+
+
+
+interface INotificationFactory <<external>>
+interface IMealFactory <<external>>
+class MealDirector <<external>>
+
+auth.Student --> controller.IController : requests services
+auth.Admin --> controller.IController : manages
+
+
+controller.Controller --> services.INotificationService : uses
+controller.Controller --> services.IAccommodationService : delegates to
+controller.Controller --> services.ITransportService : delegates to
+controller.Controller --> services.IMealService : delegates to
+controller.Controller --> services.IClubService : delegates to
+
+
+services.AccommodationService --> services.IPaymentService : uses
+services.TransportService --> services.IPaymentService : uses
+services.MealService --> services.IPaymentService : uses
+
+services.NotificationService --> INotificationFactory : uses
+services.MealService --> MealDirector : uses
+services.MealService --> IMealFactory : uses
+
+
+
+@enduml

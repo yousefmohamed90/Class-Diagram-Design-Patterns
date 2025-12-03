@@ -1,0 +1,107 @@
+@startuml
+skinparam linetype ortho
+skinparam classAttributeIconSize 0
+
+
+package "Search Module" {
+    interface ISearchStrategy {
+        + search(criteria: String): List<Object>
+    }
+
+    class SearchContext {
+        - strategy: ISearchStrategy
+        + setStrategy(s: ISearchStrategy)
+        + executeSearch(criteria: String): List<Object>
+    }
+
+    class PriceStrategy implements ISearchStrategy {
+        + search(criteria: String): List<Object>
+    }
+    class LocationStrategy implements ISearchStrategy {
+        + search(criteria: String): List<Object>
+    }
+    
+    SearchContext o-up-> ISearchStrategy
+}
+
+
+package "Services Layer" {
+  class AccommodationService {
+    - repo: IRepository
+    - searchContext: SearchContext   <<Added>>
+    + bookHousing(sID: String, aID: String): void
+    + cancelBooking(sID: String, bID: String): void
+  }
+
+  class TransportService {
+    - repo: IRepository
+    - searchContext: SearchContext   <<Added>>
+    + bookTransport(sID: String, tID: String): void
+    + cancelBooking(sID: String, bID: String): void
+  }
+
+  class MealService {
+    - repo: IRepository
+    - searchContext: SearchContext   <<Added>>
+    + selectMeal(sID: String, mType: String): void
+    + cancelMeal(sID: String, mID: String): void
+  }
+
+  class ClubService {
+    - repo: IRepository
+    - searchContext: SearchContext   <<Added>>
+    + chooseClub(sID: String, cID: String): void
+    + cancelClubMembership(sID: String, cID: String): void
+  }
+}
+
+
+package "Entities" {
+
+    class Accommodation{
+        - accommodationID: String 
+        - name: String 
+        - location: String 
+        - capacity: int 
+    } 
+    class Transport{
+        - transportID: String 
+        - type: String 
+        - schedule: String 
+        - seatsAvailable: int
+    } 
+    class Meal {
+        - mealID: String 
+        - name: String 
+        - type: String 
+        - price: double 
+    }
+    class Club {
+        - clubID: String 
+        - name: String 
+        - description: String 
+    }
+}
+
+
+
+
+' 1. Services use Repository
+
+
+
+' 2. Services use SEARCH CONTEXT (Binding via Attribute)
+AccommodationService -up-> SearchContext : uses
+TransportService -up-> SearchContext : uses
+MealService -up-> SearchContext : uses
+ClubService -up-> SearchContext : uses
+
+' 3. STRATEGY depends on ENTITIES (Binding via Return Type)
+' السهم ده بيوضح ان الاستراتيجية بترجع Entity
+ISearchStrategy --> Accommodation
+ISearchStrategy --> Transport
+ISearchStrategy -->  Meal
+
+ISearchStrategy --> Club
+
+@enduml

@@ -1,0 +1,44 @@
+' ... existing diagram code ...
+
+package "Booking Status Module" {
+    interface IBookingState {
+        + next(context: BookingContext): void
+        + prev(context: BookingContext): void
+        + printStatus(): void
+    }
+    class BookingContext {
+        - state: IBookingState
+        + setState(s: IBookingState): void
+        + requestNext(): void
+    }
+     class PendingState implements IBookingState{
++ next(context: BookingContext): void
+        + prev(context: BookingContext): void
+}
+    class ConfirmedState implements IBookingState{
++ next(context: BookingContext): void
+        + prev(context: BookingContext): void
+}
+ 
+    
+    BookingContext o-- IBookingState
+}
+package "services" {
+ class AccommodationService  {
+    - repository: IRepository
+    - paymentService: IPaymentService
+    + bookHousing(studentID: String, accommodationID: String): void
+    + cancelBooking(studentID: String, bookingID: String): void
+  }
+class TransportService  {
+    - repository: IRepository
+    - paymentService: IPaymentService
+    + bookTransport(studentID: String, transportID: String): void
+    + cancelBooking(studentID: String, bookingID: String): void
+  }
+
+
+}
+ 
+services.AccommodationService --> BookingContext 
+services.TransportService --> BookingContext

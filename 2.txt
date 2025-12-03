@@ -1,0 +1,260 @@
+@startuml Part3_Creational_Patterns
+title Part 3: Creational Patterns (Factory Method, Abstract Factory, Builder)
+skinparam classAttributeIconSize 0
+skinparam linetype ortho
+skinparam packageStyle rectangle
+
+'==============================
+'   FACTORY METHOD PATTERN
+'   (Notification Creation)
+'==============================
+
+package "patterns.factory" #LightYellow {
+  
+  '--- Product Interface ---
+  interface INotification {
+    + send(): void
+  }
+  
+  '--- Concrete Products ---
+  class EmailNotification implements INotification {
+    - recipientEmail: String
+    - message: String
+    + EmailNotification(email: String, msg: String)
+    + send(): void
+  }
+  
+  class SMSNotification implements INotification {
+    - phoneNumber: String
+    - message: String
+    + SMSNotification(phone: String, msg: String)
+    + send(): void
+  }
+  
+  '--- Factory Interface ---
+  interface INotificationFactory {
+    + createNotification(recipient: String, message: String): INotification
+  }
+  
+  '--- Concrete Factories ---
+  class EmailFactory implements INotificationFactory {
+    + createNotification(recipient: String, message: String): INotification
+  }
+  
+  class SMSFactory implements INotificationFactory {
+    + createNotification(recipient: String, message: String): INotification
+  }
+  
+  EmailFactory --> EmailNotification : creates
+  SMSFactory --> SMSNotification : creates
+}
+
+'==============================
+'   ABSTRACT FACTORY PATTERN
+'   (Meal Component Families)
+'==============================
+
+package "patterns.abstractfactory" #LightGreen {
+  
+  '--- Product Family Interfaces ---
+  interface MainDish {
+    + getName(): String
+    + getCalories(): int
+    + prepare(): void
+  }
+  
+  interface Drink {
+    + getName(): String
+    + getVolume(): int
+    + serve(): void
+  }
+  
+  interface Dessert {
+    + getName(): String
+    + getSweetness(): String
+    + plate(): void
+  }
+  
+  '--- Regular Meal Family ---
+  class BeefBurger implements MainDish {
+    - name: String
+    - calories: int
+    + BeefBurger()
+    + getName(): String
+    + getCalories(): int
+    + prepare(): void
+  }
+  
+  class Soda implements Drink {
+    - name: String
+    - volume: int
+    + Soda()
+    + getName(): String
+    + getVolume(): int
+    + serve(): void
+  }
+  
+  class IceCream implements Dessert {
+    - name: String
+    - sweetness: String
+    + IceCream()
+    + getName(): String
+    + getSweetness(): String
+    + plate(): void
+  }
+  
+  '--- Healthy Meal Family ---
+  class GrilledChicken implements MainDish {
+    - name: String
+    - calories: int
+    + GrilledChicken()
+    + getName(): String
+    + getCalories(): int
+    + prepare(): void
+  }
+  
+  class FreshJuice implements Drink {
+    - name: String
+    - volume: int
+    + FreshJuice()
+    + getName(): String
+    + getVolume(): int
+    + serve(): void
+  }
+  
+  class FruitSalad implements Dessert {
+    - name: String
+    - sweetness: String
+    + FruitSalad()
+    + getName(): String
+    + getSweetness(): String
+    + plate(): void
+  }
+  
+  '--- Abstract Factory Interface ---
+  interface IMealFactory {
+    + createMainDish(): MainDish
+    + createDrink(): Drink
+    + createDessert(): Dessert
+  }
+  
+  '--- Concrete Factories ---
+  class RegularMealFactory implements IMealFactory {
+    + RegularMealFactory()
+    + createMainDish(): MainDish
+    + createDrink(): Drink
+    + createDessert(): Dessert
+  }
+  
+  class HealthyMealFactory implements IMealFactory {
+    + HealthyMealFactory()
+    + createMainDish(): MainDish
+    + createDrink(): Drink
+    + createDessert(): Dessert
+  }
+  
+  RegularMealFactory --> BeefBurger : creates
+  RegularMealFactory --> Soda : creates
+  RegularMealFactory --> IceCream : creates
+  
+  HealthyMealFactory --> GrilledChicken : creates
+  HealthyMealFactory --> FreshJuice : creates
+  HealthyMealFactory --> FruitSalad : creates
+}
+
+
+package "patterns.builder" #LightBlue {
+  
+  '--- Product ---
+  class MealProduct {
+    - mealID: String
+    - mainDish: MainDish
+    - drink: Drink
+    - dessert: Dessert
+    - totalCalories: int
+    - dateCreated: Date
+    + MealProduct()
+    + setMainDish(main: MainDish): void
+    + setDrink(drink: Drink): void
+    + setDessert(dessert: Dessert): void
+    + calculateTotalCalories(): void
+    + getMealID(): String
+    + getMainDish(): MainDish
+    + getDrink(): Drink
+    + getDessert(): Dessert
+    + getTotalCalories(): int
+  }
+  
+  '--- Builder Interface ---
+  interface IMealBuilder {
+    + reset(): void
+    + buildMain(): void
+    + buildDrink(): void
+    + buildDessert(): void
+    + getResult(): MealProduct
+  }
+  
+  '--- Concrete Builders ---
+  class RegularMealBuilder implements IMealBuilder {
+    - meal: MealProduct
+    - factory: RegularMealFactory
+    + RegularMealBuilder()
+    + reset(): void
+    + buildMain(): void
+    + buildDrink(): void
+    + buildDessert(): void
+    + getResult(): MealProduct
+  }
+  
+  class HealthyMealBuilder implements IMealBuilder {
+    - meal: MealProduct
+    - factory: HealthyMealFactory
+    + HealthyMealBuilder()
+    + reset(): void
+    + buildMain(): void
+    + buildDrink(): void
+    + buildDessert(): void
+    + getResult(): MealProduct
+  }
+  
+  '--- Director ---
+  class MealDirector {
+    - builder: IMealBuilder
+    + MealDirector()
+    + setBuilder(builder: IMealBuilder): void
+    + constructFullMeal(): MealProduct
+    + constructMainAndDrink(): MealProduct
+    + constructLightMeal(): MealProduct
+  }
+  
+  MealDirector o--> IMealBuilder : directs
+  RegularMealBuilder --> MealProduct : builds
+  HealthyMealBuilder --> MealProduct : builds
+  MealProduct --> MainDish : contains
+  MealProduct --> Drink : contains
+  MealProduct --> Dessert : contains
+}
+
+package "services" <<external>> {
+  class NotificationService {
+    - notificationFactory: INotificationFactory
+    + sendNotification(recipient: String, message: String, type: String): void
+  }
+  
+  class MealService {
+    - mealDirector: MealDirector
+    - repository: IRepository
+    + selectMeal(studentID: String, mealType: String): void
+    + cancelMeal(studentID: String, mealID: String): void
+  }
+}
+' Builder uses Abstract Factory (concrete relationship)
+patterns.builder.RegularMealBuilder --> patterns.abstractfactory.RegularMealFactory : uses
+patterns.builder.HealthyMealBuilder --> patterns.abstractfactory.HealthyMealFactory : uses
+
+services.NotificationService --> patterns.factory.INotificationFactory : uses
+services.MealService --> patterns.builder.MealDirector : uses
+
+
+
+@enduml

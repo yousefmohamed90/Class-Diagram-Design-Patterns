@@ -1,0 +1,44 @@
+@startuml
+skinparam linetype ortho
+
+  
+    class Student  {
+        - studentID: String
+        - currentProfile: StudentProfile
+        - history: ProfileCaretaker
+        ' ... existing methods ...
+        + editProfile(name: String, email: String): void
+        + undoProfileChange(): void
+    }
+
+    ' === MEMENTO PATTERN ===
+    class StudentProfile {
+        - name: String
+        - email: String
+        + save(): ProfileMemento
+        + restore(m: ProfileMemento): void
+    }
+
+    class ProfileMemento {
+        - stateName: String
+        - stateEmail: String
+        + getName(): String
+        + getEmail(): String
+    }
+
+    class ProfileCaretaker {
+        - history: Stack<ProfileMemento>
+        + saveState(p: StudentProfile): void
+        + undo(p: StudentProfile): void
+    }
+
+    ' Relationships
+    ProfileCaretaker o--> ProfileMemento 
+    StudentProfile --> ProfileMemento
+    
+  
+    Student *-- StudentProfile 
+    Student --> ProfileCaretaker
+}
+
+@enduml
