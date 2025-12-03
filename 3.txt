@@ -1,32 +1,20 @@
 @startuml
-title Part 2: Complete Services, Repository, Database & Payment Architecture
+title Part 3: Complete Services, Repository, Database & Payment Architecture
 skinparam linetype ortho
 skinparam classAttributeIconSize 0
 skinparam packageStyle rectangle
 package "Service Layer"  {
     interface IPaymentService {
         + processTransaction(amount: double, type: String): boolean
+    }  
+    interface IAuthenticationService {
+        + authenticate(email: String, password: String): AuthToken
+        + register(userData: RegisterDTO): User
+        + validateToken(token: String): boolean
+        + logout(token: String): void
     }
     
-    interface INotificationService {
-        + sendNotification(recipientID: String, message: String, type: String): void
-    }
     
-    interface IAccommodationService {
-        + bookHousing(studentID: String, accommodationID: String): void
-    }
-    
-    interface ITransportService {
-        + bookTransport(studentID: String, transportID: String): void
-    }
-    
-    interface IMealService {
-        + selectMeal(studentID: String, mealType: String): void
-    }
-    
-    interface IClubService {
-        + chooseClub(studentID: String, clubID: String): void
-    }
 
     class PaymentService implements IPaymentService {
         - repo: IRepository
@@ -34,35 +22,42 @@ package "Service Layer"  {
         + processTransaction(amount: double, type: String): boolean
     }
     
-    class NotificationService implements INotificationService {
+    class NotificationService {
         - repository: IRepository
         + sendNotification(recipientID: String, message: String, type: String): void
     }
     
-    class AccommodationService implements IAccommodationService {
+    class AccommodationService  {
         - repository: IRepository
         - paymentService: IPaymentService
         + bookHousing(studentID: String, accommodationID: String): void
     }
     
-    class TransportService implements ITransportService {
+    class TransportService {
         - repository: IRepository
         - paymentService: IPaymentService
         + bookTransport(studentID: String, transportID: String): void
     }
     
-    class MealService implements IMealService {
+    class MealService  {
         - repository: IRepository
         - paymentService: IPaymentService
         + selectMeal(studentID: String, mealType: String): void
     }
     
-    class ClubService implements IClubService {
+    class ClubService  {
         - repository: IRepository
         - paymentService: IPaymentService
         + chooseClub(studentID: String, clubID: String): void
     }
     
+    class AuthenticationService implements IAuthenticationService {
+        - userRepository: IRepository
+        + authenticate(email: String, password: String): AuthToken
+        + register(userData: RegisterDTO): User
+        + validateToken(token: String): boolean
+        + logout(token: String): void
+    }
 }
 
 package "Repository Layer" #LightBlue {
@@ -74,8 +69,6 @@ package "Repository Layer" #LightBlue {
         + findAll(): List<Object>
         + findByQuery(criteria: Map): List<Object>
     }
-    
-
 }
 
 package "Database Layer" #LightGreen {
@@ -137,7 +130,7 @@ package "Payment Processing Layer" #LightYellow {
     }
 }
 
-package "Entities (Domain Models)" #Lavender {
+package "Entities {
    class Payment {
         - paymentID: String
         - studentID: String
@@ -184,22 +177,39 @@ package "Entities (Domain Models)" #Lavender {
         - dateSent: Date 
         - isRead: boolean
     }
+    
+    class User {
+        - userID: String
+        - email: String
+        - passwordHash: String
+        - role: String
+        - createdDate: Date
+    }
+    
+    class Role {
+        - roleID: String
+        - roleName: String
+        - permissions: List<String>
+    }
 }
 
 
-PaymentService --> IRepository : persists payments
+PaymentService --> IRepository 
 NotificationService --> IRepository 
 AccommodationService --> IRepository 
 TransportService --> IRepository 
 MealService --> IRepository
 ClubService --> IRepository 
+AuthenticationService --> IRepository
 
-AccommodationService --> IPaymentService : processes payments
-TransportService --> IPaymentService : processes payments
-MealService --> IPaymentService : processes payments
-ClubService --> IPaymentService : processes payments
 
-IRepository --> IDatabaseAccess : executes SQL queries through
+
+
+AccommodationService --> IPaymentService
+TransportService --> IPaymentService 
+MealService --> IPaymentService 
+
+IRepository --> IDatabaseAccess 
 
 IRepository --> Payment : manages
 IRepository --> Accommodation : manages
@@ -207,10 +217,9 @@ IRepository --> Transport : manages
 IRepository --> Meal : manages
 IRepository --> Club : manages
 IRepository --> Notification : manages
+IRepository --> User : manages
+IRepository --> Role : manages
 
-
-PaymentService --> IPaymentProcessor : processes through
-
-
+PaymentService --> IPaymentProcessor 
 
 @enduml
